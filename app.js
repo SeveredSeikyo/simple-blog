@@ -334,8 +334,10 @@ app.get('/generate-linkedIn-post', async (req, res) => {
                         { role: "system", content: systemPrompt },
                         { role: "user", content: userPrompt }
                     ],
-                    model: "deepseek/DeepSeek-R1",
+                    model: "xai/grok-3-mini",
                     max_tokens: 1024,
+                    temperature: 1,
+                    top_p: 1,
                     response_format: { type: "json_object" }
                 }
             });
