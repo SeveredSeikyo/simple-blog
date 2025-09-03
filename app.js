@@ -234,11 +234,9 @@ app.get('/api/today', (req, res) => {
 // GET /api/all - Get all posts (Public)
 app.get('/api/all', (req, res) => {
     const query = `
-        const query = `
         SELECT p.id, p.date, p.description, p.image, p.author
         FROM posts p
         ORDER BY p.date DESC
-    `;
     `;
     
     db.all(query, [], (err, rows) => {
@@ -260,12 +258,10 @@ app.get('/api/search', (req, res) => {
     }
 
     const query = `
-        const query = `
         SELECT p.id, p.date, p.description, p.image, p.author
         FROM posts p
         WHERE p.description LIKE ?
         ORDER BY p.date DESC
-    `;
     `;
     
     db.all(query, [`%${term}%`], (err, rows) => {
