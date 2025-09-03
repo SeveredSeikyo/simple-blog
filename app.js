@@ -199,6 +199,7 @@ app.get('/api/post', (req, res) => {
 
 // POST /api/post - Create a new blog post (Protected)
 app.post('/api/post', [verifyToken, upload.single('image')], (req, res) => {
+    console.log('req.body for POST /api/post:', req.body);
     const { title, description } = req.body;
     
     if (!title || title.trim() === '') {
@@ -425,6 +426,7 @@ app.get('/api/search', (req, res) => {
 
 // PUT /api/post/:id - Update a blog post (Protected & Ownership required)
 app.put('/api/post/:id', [verifyToken, upload.single('image')], (req, res) => {
+    console.log('req.body for PUT /api/post/:id:', req.body);
     const postId = parseInt(req.params.id);
     const { title, description, removeImage } = req.body;
     const userId = req.user.id;
