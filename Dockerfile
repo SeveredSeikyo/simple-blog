@@ -10,7 +10,7 @@ RUN adduser -S nodejs -u 1001
 
 # Create necessary directories
 RUN mkdir -p images && chown nodejs:nodejs images
-RUN mkdir -p data && chown nodejs:nodejs data
+RUN mkdir -p data && touch data/sqlite.db && chown -R nodejs:nodejs data
 
 # Copy package files first for better caching
 COPY package*.json ./
@@ -20,9 +20,6 @@ RUN npm install --omit=dev && npm cache clean --force
 
 # Copy application files
 COPY --chown=nodejs:nodejs . .
-
-# Ensure proper permissions for database file
-RUN touch sqlite.db && chown nodejs:nodejs sqlite.db
 
 # Switch to non-root user
 USER nodejs
