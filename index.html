@@ -469,12 +469,14 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                const data = await response.json();
+
                 if (response.ok) {
+                    const data = await response.json();
                     localStorage.setItem('token', data.token);
                     initializeApp();
                 } else {
-                    throw new Error(data.message || await response.text());
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Login failed');
                 }
             } catch (error) {
                 showMessage(error.message, 'error', 'auth-message');
