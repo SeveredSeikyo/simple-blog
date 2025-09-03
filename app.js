@@ -231,6 +231,32 @@ app.get('/api/today', (req, res) => {
     });
 });
 
+// GET /api/post/today - Get posts from today by author
+app.get('/api/post/today', (req, res) => {
+    const { author } = req.query;
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    if (!author || author.trim() === '') {
+        return res.status(400).send('Author is required');
+    }
+
+    const query = `
+        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
+        FROM posts p
+        WHERE date(p.date) = date(?) AND p.author = ?
+        ORDER BY p.date DESC
+    `;
+
+    db.all(query, [today, author], (err, rows) => {
+        if (err) {
+            console.error('Database error in GET /api/post/today:', err.message);
+            return res.status(500).send('Database error');
+        }
+
+        res.json(rows);
+    });
+});
+
 // GET /api/all - Get all posts (Public)
 app.get('/api/all', (req, res) => {
     const query = `
