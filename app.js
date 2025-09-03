@@ -43,11 +43,21 @@ db.serialize(() => {
             user_id INTEGER NOT NULL,
             author TEXT NOT NULL,
             date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            title TEXT NOT NULL,
             description TEXT NOT NULL,
             image TEXT,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     `);
+
+    // Add title column if it doesn't exist
+    db.run("ALTER TABLE posts ADD COLUMN title TEXT", (err) => {
+        if (err && err.message.includes("duplicate column name")) {
+            // Column already exists, ignore error
+        } else if (err) {
+            console.error("Error adding title column:", err.message);
+        }
+    });
 });
 
 // Middleware
@@ -168,7 +178,7 @@ app.get('/api/post', (req, res) => {
     }
 
     const query = `
-        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
+        SELECT p.id, p.user_id, p.date, p.title, p.description, p.image, p.author
         FROM posts p
         WHERE p.author = ?
         ORDER BY p.date DESC
@@ -189,8 +199,11 @@ app.get('/api/post', (req, res) => {
 
 // POST /api/post - Create a new blog post (Protected)
 app.post('/api/post', [verifyToken, upload.single('image')], (req, res) => {
-    const { description } = req.body;
+    const { title, description } = req.body;
     
+    if (!title || title.trim() === '') {
+        return res.status(400).send('Title is required');
+    }
     if (!description || description.trim() === '') {
         return res.status(400).send('Description is required');
     }
@@ -199,9 +212,9 @@ app.post('/api/post', [verifyToken, upload.single('image')], (req, res) => {
     const userId = req.user.id;
     const author = req.user.username;
 
-    const query = `INSERT INTO posts (user_id, author, description, image) VALUES (?, ?, ?, ?)`;
+    const query = `INSERT INTO posts (user_id, author, title, description, image) VALUES (?, ?, ?, ?, ?)`;
     
-    db.run(query, [userId, author, description.trim(), imageFilename], function(err) {
+    db.run(query, [userId, author, title.trim(), description.trim(), imageFilename], function(err) {
         if (err) {
             console.error('Database error in POST /api/post:', err.message);
             return res.status(500).send('Database error');
@@ -219,7 +232,7 @@ app.get('/api/today', (req, res) => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     
     const query = `
-        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
+        SELECT p.id, p.user_id, p.date, p.title, p.description, p.image, p.author
         FROM posts p
         WHERE date(p.date) = date(?)
         ORDER BY p.date DESC
@@ -245,7 +258,7 @@ app.get('/api/post/today', (req, res) => {
     }
 
     const query = `
-        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
+        SELECT p.id, p.user_id, p.date, p.title, p.description, p.image, p.author
         FROM posts p
         WHERE date(p.date) = date(?) AND p.author = ?
         ORDER BY p.date DESC
@@ -271,7 +284,7 @@ app.get('/generate-linkedIn-post', async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         const query = `
-            SELECT description
+            SELECT title, description, image
             FROM posts
             WHERE author = ? AND date(date) = ?
         `;
@@ -286,7 +299,12 @@ app.get('/generate-linkedIn-post', async (req, res) => {
                 return res.status(404).json({ error: 'No posts found for today' });
             }
 
-            const descriptions = rows.map(row => row.description);
+            // Build structured JSON for the model
+            const postsJson = rows.map(row => ({
+                title: row.title,
+                description: row.description,
+                image: row.image || null
+            }));
 
             const GITHUB_TOKEN = process.env.API_KEY;
             const client = ModelClient(
@@ -296,28 +314,28 @@ app.get('/generate-linkedIn-post', async (req, res) => {
 
             const systemPrompt = `
             You are a professional content writer specializing in LinkedIn posts for the tech community. 
-            Your job is to turn raw blog entries into engaging LinkedIn posts.
+            Your job is to transform raw blog posts into engaging LinkedIn updates.
 
             RULES:
-            - Use ONLY the provided JSON (no unrelated topics).
-            - Summarize the description into a professional + personal post.
-            - Keep it 100–200 words, friendly but professional.
-            - End with a question or call-to-action.
-            - If "image" exists, add a one-line caption.
-            - The LinkedIn post MUST NOT be empty. If the blog content is short, expand with reflection, context, or related insights.
+            - Use ONLY the provided JSON (title, description, image).
+            - Summarize the main idea in 100–200 words.
+            - Add a personal or reflective touch.
+            - Keep it friendly + professional, avoid jargon overload.
+            - End with a question or call-to-action to spark engagement.
+            - If "image" exists, add a 1-line caption suggestion.
             
-            STRICT OUTPUT FORMAT:
-            Return ONLY valid JSON with this format:
-            { "linkedin_post": "final LinkedIn post text" }
-            Do not include explanations, <think>, or extra text.
+            STRICT OUTPUT RULE:
+            Return ONLY valid JSON in this format:
+            { "linkedin_post": "..." }
             `;
 
             const userPrompt = `
-            Here is today’s blog post JSON:
+            Here are today’s blog posts in JSON:
 
-            ${JSON.stringify(descriptions, null, 2)}
+            ${JSON.stringify(postsJson, null, 2)}
 
-            Task: Rewrite it into a LinkedIn post following the rules above.
+            Task: Rewrite each into a LinkedIn post following the rules above.
+            If there are multiple posts, combine them into one cohesive update.
             `;
 
             const response = await client.path("/chat/completions").post({
@@ -340,23 +358,15 @@ app.get('/generate-linkedIn-post', async (req, res) => {
 
             let resultText = response.body.choices[0].message?.content || "";
 
-            // 🛠 Strip junk like <think>...</think> if it sneaks in
+            // Strip <think> noise if it sneaks in
             resultText = resultText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 
             let result;
             try {
                 result = JSON.parse(resultText);
             } catch (e) {
-                console.warn("Invalid JSON, falling back. Raw output:", resultText);
-
-                // Final fallback → wrap text as LinkedIn post
+                console.warn("Invalid JSON, fallback. Raw output:", resultText);
                 result = { linkedin_post: resultText.replace(/[\n\r]+/g, " ").trim() };
-            }
-
-            // 🚨 Server-side safeguard → prevent empty posts
-            if (!result.linkedin_post || result.linkedin_post.trim() === "") {
-                result.linkedin_post = descriptions.join(" ").slice(0, 180) +
-                    " … What’s your take on this? 🚀";
             }
 
             res.json(result);
@@ -373,7 +383,7 @@ app.get('/generate-linkedIn-post', async (req, res) => {
 // GET /api/all - Get all posts (Public)
 app.get('/api/all', (req, res) => {
     const query = `
-        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
+        SELECT p.id, p.user_id, p.date, p.title, p.description, p.image, p.author
         FROM posts p
         ORDER BY p.date DESC
     `;
@@ -397,13 +407,13 @@ app.get('/api/search', (req, res) => {
     }
 
     const query = `
-        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
+        SELECT p.id, p.user_id, p.date, p.title, p.description, p.image, p.author
         FROM posts p
-        WHERE p.description LIKE ?
+        WHERE p.description LIKE ? OR p.title LIKE ?
         ORDER BY p.date DESC
     `;
     
-    db.all(query, [`%${term}%`], (err, rows) => {
+    db.all(query, [`%${term}%`, `%${term}%`], (err, rows) => {
         if (err) {
             console.error('Database error in GET /api/search:', err.message);
             return res.status(500).send('Database error');
@@ -416,13 +426,16 @@ app.get('/api/search', (req, res) => {
 // PUT /api/post/:id - Update a blog post (Protected & Ownership required)
 app.put('/api/post/:id', [verifyToken, upload.single('image')], (req, res) => {
     const postId = parseInt(req.params.id);
-    const { description, removeImage } = req.body;
+    const { title, description, removeImage } = req.body;
     const userId = req.user.id;
 
     if (!postId || isNaN(postId)) {
         return res.status(400).send('Invalid post ID');
     }
     
+    if (!title || title.trim() === '') {
+        return res.status(400).send('Title is required');
+    }
     if (!description || description.trim() === '') {
         return res.status(400).send('Description is required');
     }
@@ -470,9 +483,9 @@ app.put('/api/post/:id', [verifyToken, upload.single('image')], (req, res) => {
         }
         
         // Update the post
-        const query = `UPDATE posts SET description = ?, image = ? WHERE id = ?`;
+        const query = `UPDATE posts SET title = ?, description = ?, image = ? WHERE id = ?`;
         
-        db.run(query, [description.trim(), newImageFilename, postId], function(err) {
+        db.run(query, [title.trim(), description.trim(), newImageFilename, postId], function(err) {
             if (err) {
                 console.error('Database error in PUT /api/post/:id (update post):', err.message);
                 return res.status(500).send('Database error');

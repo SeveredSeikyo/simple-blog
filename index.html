@@ -399,6 +399,10 @@
                 <h2>Create New Post</h2>
                 <form id="blogForm" enctype="multipart/form-data">
                     <div class="form-group">
+                        <label for="title">Post Title:</label>
+                        <input type="text" id="title" name="title" placeholder="Enter post title" required>
+                    </div>
+                    <div class="form-group">
                         <label for="description">Post Content:</label>
                         <textarea id="description" name="description" placeholder="Write your blog post here..." required></textarea>
                     </div>
@@ -440,6 +444,10 @@
             <h2>Edit Post</h2>
             <form id="editForm" enctype="multipart/form-data">
                 <input type="hidden" id="editPostId">
+                <div class="form-group">
+                    <label for="editTitle">Post Title:</label>
+                    <input type="text" id="editTitle" name="title" required>
+                </div>
                 <div class="form-group">
                     <label for="editDescription">Post Content:</label>
                     <textarea id="editDescription" name="description" required></textarea>
@@ -669,7 +677,8 @@
             }
             
             container.innerHTML = posts.map(post => {
-                                const escapedDescription = post.description.replace(/\\/g, '\\').replace(/'/g, "'\'").replace(/\n/g, '\n');
+                const escapedTitle = post.title.replace(/\\/g, '\\').replace(/'/g, "'\'").replace(/\n/g, '\n');
+                const escapedDescription = post.description.replace(/\\/g, '\\').replace(/'/g, "'\'").replace(/\n/g, '\n');
                 const escapedImage = (post.image || '').replace(/'/g, "'\'");
                 const isOwner = currentUser && currentUser.id === post.user_id;
 
@@ -679,11 +688,12 @@
                         <div class="post-author">by ${post.author}</div>
                         <div class="post-date">${new Date(post.date).toLocaleString()}</div>
                     </div>
+                    <h3>${post.title}</h3>
                     <div class="post-description">${post.description.replace(/\n/g, '<br>')}</div>
                     ${post.image ? `<img src="/images/${post.image}" alt="Post image" class="post-image">` : ''}
                     ${isOwner ? `
                     <div class="post-actions">
-                        <button class="btn btn-small" onclick="editPost(${post.id}, '${escapedDescription}', '${escapedImage}')">Edit</button>
+                        <button class="btn btn-small" onclick="editPost(${post.id}, '${escapedTitle}', '${escapedDescription}', '${escapedImage}')">Edit</button>
                         <button class="btn btn-danger btn-small" onclick="deletePost(${post.id})">Delete</button>
                     </div>
                     ` : ''}
@@ -691,8 +701,9 @@
             `}).join('');
         }
         
-        function editPost(id, description, image) {
+        function editPost(id, title, description, image) {
             document.getElementById('editPostId').value = id;
+            document.getElementById('editTitle').value = title;
             document.getElementById('editDescription').value = description;
             
             const currentImageSection = document.getElementById('currentImageSection');
