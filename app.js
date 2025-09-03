@@ -164,7 +164,7 @@ app.get('/api/post', (req, res) => {
     }
 
     const query = `
-        SELECT p.id, p.date, p.description, p.image, p.author
+        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
         FROM posts p
         WHERE p.author = ?
         ORDER BY p.date DESC
@@ -215,7 +215,7 @@ app.get('/api/today', (req, res) => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     
     const query = `
-        SELECT p.id, p.date, p.description, p.image, p.author
+        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
         FROM posts p
         WHERE date(p.date) = date(?)
         ORDER BY p.date DESC
@@ -234,7 +234,7 @@ app.get('/api/today', (req, res) => {
 // GET /api/all - Get all posts (Public)
 app.get('/api/all', (req, res) => {
     const query = `
-        SELECT p.id, p.date, p.description, p.image, p.author
+        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
         FROM posts p
         ORDER BY p.date DESC
     `;
@@ -258,7 +258,7 @@ app.get('/api/search', (req, res) => {
     }
 
     const query = `
-        SELECT p.id, p.date, p.description, p.image, p.author
+        SELECT p.id, p.user_id, p.date, p.description, p.image, p.author
         FROM posts p
         WHERE p.description LIKE ?
         ORDER BY p.date DESC
