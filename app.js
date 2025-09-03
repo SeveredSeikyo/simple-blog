@@ -131,6 +131,123 @@ app.get('/api/all', (req, res) => {
     });
 });
 
+// PUT /api/post/:id - Update a blog post
+app.put('/api/post/:id', upload.single('image'), (req, res) => {
+    const postId = parseInt(req.params.id);
+    const { description, removeImage } = req.body;
+    
+    if (!postId || isNaN(postId)) {
+        return res.status(400).send('Invalid post ID');
+    }
+    
+    if (!description || description.trim() === '') {
+        return res.status(400).send('Description is required');
+    }
+    
+    // First, get the current post to handle image deletion
+    db.get('SELECT image FROM posts WHERE id = ?', [postId], (err, currentPost) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).send('Database error');
+        }
+        
+        if (!currentPost) {
+            return res.status(404).send('Post not found');
+        }
+        
+        let newImageFilename = currentPost.image; // Keep current image by default
+        
+        // Handle new image upload
+        if (req.file) {
+            newImageFilename = req.file.filename;
+            
+            // Delete old image file if it exists
+            if (currentPost.image) {
+                const oldImagePath = path.join(__dirname, 'images', currentPost.image);
+                fs.unlink(oldImagePath, (err) => {
+                    if (err) console.log('Could not delete old image:', err);
+                });
+            }
+        }
+        // Handle image removal
+        else if (removeImage === 'true') {
+            newImageFilename = null;
+            
+            // Delete current image file if it exists
+            if (currentPost.image) {
+                const oldImagePath = path.join(__dirname, 'images', currentPost.image);
+                fs.unlink(oldImagePath, (err) => {
+                    if (err) console.log('Could not delete image:', err);
+                });
+            }
+        }
+        
+        // Update the post
+        const query = `UPDATE posts SET description = ?, image = ? WHERE id = ?`;
+        
+        db.run(query, [description.trim(), newImageFilename, postId], function(err) {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).send('Database error');
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).send('Post not found');
+            }
+            
+            res.json({
+                id: postId,
+                message: 'Post updated successfully'
+            });
+        });
+    });
+});
+
+// DELETE /api/post/:id - Delete a blog post
+app.delete('/api/post/:id', (req, res) => {
+    const postId = parseInt(req.params.id);
+    
+    if (!postId || isNaN(postId)) {
+        return res.status(400).send('Invalid post ID');
+    }
+    
+    // First, get the post to delete associated image file
+    db.get('SELECT image FROM posts WHERE id = ?', [postId], (err, post) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).send('Database error');
+        }
+        
+        if (!post) {
+            return res.status(404).send('Post not found');
+        }
+        
+        // Delete the post from database
+        db.run('DELETE FROM posts WHERE id = ?', [postId], function(err) {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).send('Database error');
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).send('Post not found');
+            }
+            
+            // Delete associated image file if it exists
+            if (post.image) {
+                const imagePath = path.join(__dirname, 'images', post.image);
+                fs.unlink(imagePath, (err) => {
+                    if (err) console.log('Could not delete image file:', err);
+                });
+            }
+            
+            res.json({
+                message: 'Post deleted successfully'
+            });
+        });
+    });
+});
+
 // GET / - Serve the main HTML file
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
