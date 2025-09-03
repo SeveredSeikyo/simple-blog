@@ -120,7 +120,7 @@ app.post('/api/register', async (req, res) => {
             if (err.message.includes('UNIQUE constraint failed')) {
                 return res.status(409).send('Username already exists');
             }
-            console.error('Database error:', err);
+            console.error('Database error in POST /api/register:', err.message);
             return res.status(500).send('Database error');
         }
         res.status(201).json({ id: this.lastID, username: username });
@@ -138,7 +138,7 @@ app.post('/api/login', (req, res) => {
     const query = `SELECT * FROM users WHERE username = ?`;
     db.get(query, [username], async (err, user) => {
         if (err) {
-            console.error('Database error:', err);
+            console.error('Database error in POST /api/login:', err.message);
             return res.status(500).send('Database error');
         }
         if (!user) {
@@ -199,7 +199,7 @@ app.post('/api/post', [verifyToken, upload.single('image')], (req, res) => {
     
     db.run(query, [userId, author, description.trim(), imageFilename], function(err) {
         if (err) {
-            console.error('Database error:', err);
+            console.error('Database error in POST /api/post:', err.message);
             return res.status(500).send('Database error');
         }
         
@@ -223,7 +223,7 @@ app.get('/api/today', (req, res) => {
     
     db.all(query, [today], (err, rows) => {
         if (err) {
-            console.error('Database error:', err);
+            console.error('Database error in GET /api/today:', err.message);
             return res.status(500).send('Database error');
         }
         
@@ -241,7 +241,7 @@ app.get('/api/all', (req, res) => {
     
     db.all(query, [], (err, rows) => {
         if (err) {
-            console.error('Database error:', err);
+            console.error('Database error in GET /api/all:', err.message);
             return res.status(500).send('Database error');
         }
         
@@ -266,7 +266,7 @@ app.get('/api/search', (req, res) => {
     
     db.all(query, [`%${term}%`], (err, rows) => {
         if (err) {
-            console.error('Database error:', err);
+            console.error('Database error in GET /api/search:', err.message);
             return res.status(500).send('Database error');
         }
         
@@ -291,7 +291,7 @@ app.put('/api/post/:id', [verifyToken, upload.single('image')], (req, res) => {
     // First, get the current post to check ownership and handle image deletion
     db.get('SELECT user_id, image FROM posts WHERE id = ?', [postId], (err, currentPost) => {
         if (err) {
-            console.error('Database error:', err);
+            console.error('Database error in PUT /api/post/:id (get post):', err.message);
             return res.status(500).send('Database error');
         }
         
@@ -335,7 +335,7 @@ app.put('/api/post/:id', [verifyToken, upload.single('image')], (req, res) => {
         
         db.run(query, [description.trim(), newImageFilename, postId], function(err) {
             if (err) {
-                console.error('Database error:', err);
+                console.error('Database error in PUT /api/post/:id (update post):', err.message);
                 return res.status(500).send('Database error');
             }
             
@@ -359,7 +359,7 @@ app.delete('/api/post/:id', verifyToken, (req, res) => {
     // First, get the post to check ownership and delete associated image file
     db.get('SELECT user_id, image FROM posts WHERE id = ?', [postId], (err, post) => {
         if (err) {
-            console.error('Database error:', err);
+            console.error('Database error in DELETE /api/post/:id (get post):', err.message);
             return res.status(500).send('Database error');
         }
         
@@ -374,7 +374,7 @@ app.delete('/api/post/:id', verifyToken, (req, res) => {
         // Delete the post from database
         db.run('DELETE FROM posts WHERE id = ?', [postId], function(err) {
             if (err) {
-                console.error('Database error:', err);
+                console.error('Database error in DELETE /api/post/:id (delete post):', err.message);
                 return res.status(500).send('Database error');
             }
             
