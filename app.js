@@ -344,13 +344,24 @@ app.get('/generate-linkedIn-post', async (req, res) => {
 
             let result;
             try {
+                // Try parsing as JSON first
                 result = JSON.parse(resultText);
             } catch (e) {
-                console.error("Model returned non-JSON:", resultText);
-                return res.status(500).json({
-                    error: "Model did not return valid JSON",
-                    raw: resultText
-                });
+                console.warn("Invalid JSON, falling back. Raw output:", resultText);
+
+                // Attempt to fix: if it looks like JSON but missing closing brace
+                if (resultText.trim().startsWith("{") && !resultText.trim().endsWith("}")) {
+                    resultText = resultText.trim() + "}";
+                    try {
+                        result = JSON.parse(resultText);
+                    } catch (e2) {
+                        // Final fallback
+                        result = { linkedin_post: resultText.replace(/[\n\r]+/g, " ").trim() };
+                    }
+                } else {
+                    // Final fallback → wrap as LinkedIn post
+                    result = { linkedin_post: resultText.replace(/[\n\r]+/g, " ").trim() };
+                }
             }
 
             res.json(result);
