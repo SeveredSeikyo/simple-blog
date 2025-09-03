@@ -7,7 +7,9 @@ const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const axios = require('axios');
+const ModelClient = require("@azure-rest/ai-inference").default;
+const { isUnexpected } = require("@azure-rest/ai-inference");
+const { AzureKeyCredential } = require("@azure/core-auth");
 
 const app = express();
 const port = 3020;
@@ -282,30 +284,31 @@ app.get('/generate-linkedIn-post', async (req, res) => {
 
             const descriptions = rows.map(row => row.description);
 
-            const DEEPSEEK_API_KEY = process.env.API_KEY;
-            const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+            const GITHUB_TOKEN = process.env.API_KEY;
+            const client = ModelClient(
+                "https://models.github.ai/inference",
+                new AzureKeyCredential(GITHUB_TOKEN)
+            );
 
             const systemPrompt = process.env.System_Prompt || 'You are a helpful assistant.';
             const userPrompt = process.env.User_Prompt ? process.env.User_Prompt.replace('{descriptions}', descriptions.join('\n')) : `Please generate a LinkedIn post based on the following descriptions:\n${descriptions.join('\n')}`
 
-            const response = await axios.post(
-                DEEPSEEK_API_URL,
-                {
-                    "model": "deepseek-chat",
-                    "messages": [
-                        {"role": "system", "content": systemPrompt},
-                        {"role": "user", "content": userPrompt}
-                    ]
-                },
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-                    }
+            const response = await client.path("/chat/completions").post({
+                body: {
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: userPrompt }
+                    ],
+                    model: "deepseek/DeepSeek-R1",
+                    max_tokens: 2048,
                 }
-            );
+            });
 
-            res.json(response.data.choices[0].message.content);
+            if (isUnexpected(response)) {
+                throw response.body.error;
+            }
+
+            res.json(response.body.choices[0].message.content);
         });
     } catch (error) {
         console.error(error);
