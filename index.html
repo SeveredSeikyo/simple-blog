@@ -590,7 +590,6 @@
         document.getElementById('blogForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
-            formData.append('title', document.getElementById('title').value);
             try {
                 const response = await authenticatedFetch('/api/post', {
                     method: 'POST',
@@ -756,7 +755,6 @@
             e.preventDefault();
             const id = document.getElementById('editPostId').value;
             const formData = new FormData(e.target);
-            formData.append('title', document.getElementById('editTitle').value);
             if (e.target.getAttribute('data-remove-image') === 'true') {
                 formData.append('removeImage', 'true');
             }
