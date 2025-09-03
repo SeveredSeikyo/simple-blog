@@ -304,8 +304,9 @@ app.get('/generate-linkedIn-post', async (req, res) => {
             - Keep it 100–200 words, friendly but professional.
             - End with a question or call-to-action.
             - If "image" exists, add a one-line caption.
+            - The LinkedIn post MUST NOT be empty. If the blog content is short, expand with reflection, context, or related insights.
             
-            STRICT OUTPUT RULE:
+            STRICT OUTPUT FORMAT:
             Return ONLY valid JSON with this format:
             { "linkedin_post": "final LinkedIn post text" }
             Do not include explanations, <think>, or extra text.
@@ -344,24 +345,18 @@ app.get('/generate-linkedIn-post', async (req, res) => {
 
             let result;
             try {
-                // Try parsing as JSON first
                 result = JSON.parse(resultText);
             } catch (e) {
                 console.warn("Invalid JSON, falling back. Raw output:", resultText);
 
-                // Attempt to fix: if it looks like JSON but missing closing brace
-                if (resultText.trim().startsWith("{") && !resultText.trim().endsWith("}")) {
-                    resultText = resultText.trim() + "}";
-                    try {
-                        result = JSON.parse(resultText);
-                    } catch (e2) {
-                        // Final fallback
-                        result = { linkedin_post: resultText.replace(/[\n\r]+/g, " ").trim() };
-                    }
-                } else {
-                    // Final fallback → wrap as LinkedIn post
-                    result = { linkedin_post: resultText.replace(/[\n\r]+/g, " ").trim() };
-                }
+                // Final fallback → wrap text as LinkedIn post
+                result = { linkedin_post: resultText.replace(/[\n\r]+/g, " ").trim() };
+            }
+
+            // 🚨 Server-side safeguard → prevent empty posts
+            if (!result.linkedin_post || result.linkedin_post.trim() === "") {
+                result.linkedin_post = descriptions.join(" ").slice(0, 180) +
+                    " … What’s your take on this? 🚀";
             }
 
             res.json(result);
@@ -371,6 +366,7 @@ app.get('/generate-linkedIn-post', async (req, res) => {
         res.status(500).json({ error: 'Failed to generate LinkedIn post' });
     }
 });
+
 
 
 
