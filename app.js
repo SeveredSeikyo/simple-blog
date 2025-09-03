@@ -314,19 +314,24 @@ app.get('/generate-linkedIn-post', async (req, res) => {
             );
 
             const systemPrompt = `
-            You are a professional content writer specializing in LinkedIn posts for the tech community. 
+            You are a professional LinkedIn content writer for the tech community. 
             Your job is to transform raw blog posts into engaging LinkedIn updates.
 
-            RULES:
-            - Use ONLY the provided JSON (title, description, image).
-            - Summarize the main idea in 100–200 words.
-            - Add a personal or reflective touch.
-            - Keep it friendly + professional, avoid jargon overload.
-            - End with a question or call-to-action to spark engagement.
-            - If "image" exists, add a 1-line caption suggestion.
-            
-            STRICT OUTPUT RULE:
-            Return ONLY valid JSON in this format:
+            STYLE:
+            - Write naturally, like a human professional on LinkedIn (not AI-generated).
+            - Be conversational, thoughtful, and professional.
+            - Use first-person voice when reflecting on the topic.
+            - Keep it 100–200 words max.
+
+            REQUIREMENTS:
+            - Always produce a LinkedIn post, never return empty or generic text.
+            - Summarize or reflect on the given content, even if it's short.
+            - Add a personal or reflective angle (e.g., what excites you, why it matters, how it connects to broader trends).
+            - End with a genuine question or call-to-action that sparks engagement.
+            - If "image" exists, add a short caption idea for it.
+
+            STRICT OUTPUT FORMAT:
+            Return ONLY valid JSON:
             { "linkedin_post": "..." }
             `;
 
@@ -335,8 +340,10 @@ app.get('/generate-linkedIn-post', async (req, res) => {
 
             ${JSON.stringify(postsJson, null, 2)}
 
-            Task: Rewrite each into a LinkedIn post following the rules above.
-            If there are multiple posts, combine them into one cohesive update.
+            Task: Rewrite them into one natural, human-like LinkedIn post following the rules above. 
+            You must ALWAYS output a LinkedIn post — even if the description is short, explain its significance, 
+            share thoughts about it, or reflect on why it matters. 
+            Never leave the post empty.
             `;
 
             const response = await client.path("/chat/completions").post({
@@ -377,6 +384,7 @@ app.get('/generate-linkedIn-post', async (req, res) => {
         res.status(500).json({ error: 'Failed to generate LinkedIn post' });
     }
 });
+
 
 
 
