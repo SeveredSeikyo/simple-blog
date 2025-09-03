@@ -282,6 +282,10 @@ app.get('/generate-linkedIn-post', async (req, res) => {
                 return res.status(500).json({ error: 'Failed to fetch posts' });
             }
 
+            if (!rows.length) {
+                return res.status(404).json({ error: 'No posts found for today' });
+            }
+
             const descriptions = rows.map(row => row.description);
 
             const GITHUB_TOKEN = process.env.API_KEY;
@@ -293,6 +297,7 @@ app.get('/generate-linkedIn-post', async (req, res) => {
             const systemPrompt = `
             You are a professional content writer specializing in LinkedIn posts for the tech community. 
             Your role is to turn raw blog entries (given in JSON) into engaging, concise, and professional LinkedIn posts. 
+            
             RULES:
             - Always use the given JSON as the sole source of content (do not invent unrelated topics).
             - Extract the "description" field as the blog content.
@@ -302,7 +307,12 @@ app.get('/generate-linkedIn-post', async (req, res) => {
             - Encourage engagement with a question or call-to-action.
             - Length: 100–200 words.
             - If "image" is not null, suggest a 1-line caption.
-            - Return ONLY the LinkedIn post text (no JSON, no explanations).
+            
+            RETURN FORMAT:
+            Return only valid JSON in the following format:
+            {
+              "linkedin_post": "final LinkedIn post text here"
+            }
             `;
 
             const userPrompt = `
@@ -315,7 +325,7 @@ app.get('/generate-linkedIn-post', async (req, res) => {
             2. Rewrite it as a LinkedIn post (100–200 words).
             3. Keep the tone professional + personal.
             4. If an "image" is present, add a one-line caption suggestion.
-            5. Return the final LinkedIn post as plain text only.
+            5. Return the final LinkedIn post strictly as JSON with key "linkedin_post".
             `;
 
             const response = await client.path("/chat/completions").post({
@@ -325,7 +335,8 @@ app.get('/generate-linkedIn-post', async (req, res) => {
                         { role: "user", content: userPrompt }
                     ],
                     model: "deepseek/DeepSeek-R1",
-                    max_tokens: 2048,
+                    max_tokens: 1024,
+                    response_format: { type: "json_object" } // Forces JSON output
                 }
             });
 
@@ -334,13 +345,15 @@ app.get('/generate-linkedIn-post', async (req, res) => {
                 throw new Error("Failed to generate LinkedIn post from Deepseek API.");
             }
 
-            res.json(response.body.choices[0].message.content);
+            const result = JSON.parse(response.body.choices[0].message.content);
+            res.json(result); // Clean JSON { linkedin_post: "..." }
         });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to generate LinkedIn post' });
     }
 });
+
 
 // GET /api/all - Get all posts (Public)
 app.get('/api/all', (req, res) => {
