@@ -336,17 +336,21 @@ app.get('/generate-linkedIn-post', async (req, res) => {
                     ],
                     model: "deepseek/DeepSeek-R1",
                     max_tokens: 1024,
-                    response_format: { type: "json_object" } // Forces JSON output
+                    response_format: { type: "json_object" }
                 }
             });
 
-            if (isUnexpected(response)) {
-                console.error("Deepseek API error:", response.body.error);
-                throw new Error("Failed to generate LinkedIn post from Deepseek API.");
+            const resultText = response.body.choices[0].message.content;
+
+            let result;
+            try {
+                result = JSON.parse(resultText);
+            } catch (e) {
+                console.error("Non-JSON output from model:", resultText);
+                return res.status(500).json({ error: "Model did not return valid JSON" });
             }
 
-            const result = JSON.parse(response.body.choices[0].message.content);
-            res.json(result); // Clean JSON { linkedin_post: "..." }
+            res.json(result);
         });
     } catch (error) {
         console.error(error);
