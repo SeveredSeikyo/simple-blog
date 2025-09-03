@@ -104,6 +104,16 @@
             background: linear-gradient(45deg, #48cae4, #0096c7);
             margin-left: 10px;
         }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 14px;
+            margin-right: 5px;
+        }
         
         .posts-section {
             margin-top: 30px;
@@ -114,11 +124,22 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         .posts-header h2 {
             color: #333;
             font-size: 1.8rem;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-form input {
+            min-width: 250px;
         }
         
         .filter-buttons {
@@ -152,6 +173,7 @@
             color: #333;
             line-height: 1.6;
             margin-bottom: 15px;
+            white-space: pre-wrap;
         }
         
         .post-image {
@@ -161,6 +183,11 @@
             margin-top: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
+
+        .post-actions {
+            margin-top: 15px;
+            text-align: right;
+        }
         
         .loading {
             text-align: center;
@@ -169,22 +196,70 @@
             padding: 20px;
         }
         
-        .error {
-            color: #e74c3c;
-            background: #ffeaea;
+        .message {
             padding: 15px;
             border-radius: 10px;
             margin: 15px 0;
-            border-left: 4px solid #e74c3c;
+            border-left-width: 4px;
+            border-left-style: solid;
+        }
+
+        .error {
+            color: #e74c3c;
+            background: #ffeaea;
+            border-color: #e74c3c;
         }
         
         .success {
             color: #27ae60;
             background: #eafaf1;
-            padding: 15px;
+            border-color: #27ae60;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 30px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 15px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .close-btn {
+            color: #aaa;
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: black;
+        }
+
+        #currentImageSection img {
+            max-width: 200px;
             border-radius: 10px;
-            margin: 15px 0;
-            border-left: 4px solid #27ae60;
+            margin-bottom: 10px;
         }
         
         @media (max-width: 768px) {
@@ -203,6 +278,15 @@
             
             .filter-buttons {
                 justify-content: center;
+            }
+
+            .search-form {
+                width: 100%;
+            }
+
+            .search-form input {
+                min-width: 0;
+                width: 100%;
             }
         }
     </style>
@@ -231,6 +315,10 @@
         <div class="posts-section">
             <div class="posts-header">
                 <h2>Blog Posts</h2>
+                <form class="search-form" id="searchForm">
+                    <input type="search" id="searchInput" placeholder="Search in posts...">
+                    <button type="submit" class="btn">Search</button>
+                </form>
                 <div class="filter-buttons">
                     <button class="btn" onclick="loadAllPosts()">All Posts</button>
                     <button class="btn btn-secondary" onclick="loadTodayPosts()">Today's Posts</button>
@@ -240,6 +328,35 @@
             <div id="posts-container">
                 <div class="loading">Loading posts...</div>
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Post Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Post</h2>
+            <form id="editForm" enctype="multipart/form-data">
+                <input type="hidden" id="editPostId">
+                <div class="form-group">
+                    <label for="editDescription">Post Content:</label>
+                    <textarea id="editDescription" name="description" required></textarea>
+                </div>
+                
+                <div id="currentImageSection" class="form-group" style="display: none;">
+                    <label>Current Image:</label>
+                    <div id="currentImageContainer"></div>
+                    <button type="button" id="removeImageBtn" class="btn btn-danger btn-small" onclick="removeCurrentImage()">Remove Image</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="editImage">Upload New Image (optional):</label>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Uploading a new image will replace the current one.</p>
+                    <input type="file" id="editImage" name="image" accept="image/*">
+                </div>
+                
+                <button type="submit" class="btn">Update Post</button>
+            </form>
         </div>
     </div>
 
@@ -275,6 +392,17 @@
                 showMessage(`Network error: ${error.message}`, 'error');
             }
         });
+
+        // Search form submission
+        document.getElementById('searchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const searchTerm = document.getElementById('searchInput').value;
+            if (searchTerm.trim()) {
+                searchPosts(searchTerm);
+            } else {
+                loadAllPosts();
+            }
+        });
         
         // Load all posts
         async function loadAllPosts() {
@@ -284,7 +412,7 @@
                 
                 if (response.ok) {
                     const posts = await response.json();
-                    displayPosts(posts);
+                    displayPosts(posts, { filter: 'all' });
                 } else {
                     showMessage('Error loading posts', 'error');
                 }
@@ -301,7 +429,7 @@
                 
                 if (response.ok) {
                     const posts = await response.json();
-                    displayPosts(posts, "today");
+                    displayPosts(posts, { filter: 'today' });
                 } else {
                     showMessage('Error loading today\'s posts', 'error');
                 }
@@ -309,28 +437,52 @@
                 showMessage(`Network error: ${error.message}`, 'error');
             }
         }
+
+        // Search for posts
+        async function searchPosts(term) {
+            try {
+                document.getElementById('posts-container').innerHTML = `<div class="loading">Searching for "${term}"...</div>`;
+                const response = await fetch(`/api/search?term=${encodeURIComponent(term)}`);
+                
+                if (response.ok) {
+                    const posts = await response.json();
+                    displayPosts(posts, { filter: 'search', term: term });
+                } else {
+                    showMessage('Error searching posts', 'error');
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, 'error');
+            }
+        }
         
         // Display posts
-        function displayPosts(posts, filter = 'all') {
+        function displayPosts(posts, context = {}) {
             const container = document.getElementById('posts-container');
             
             if (posts.length === 0) {
-                const message = filter === 'today' ? 'No posts today yet!' : 'No posts yet!';
+                let message = 'No posts yet!';
+                if (context.filter === 'today') {
+                    message = 'No posts today yet!';
+                } else if (context.filter === 'search') {
+                    message = `No posts found for "${context.term}".`;
+                }
                 container.innerHTML = `<div class="loading">${message}</div>`;
                 return;
             }
             
-            container.innerHTML = posts.map(post => `
-                <div class="post">
+            container.innerHTML = posts.map(post => {
+                const escapedDescription = post.description.replace(/'/g, "'\'").replace(/\n/g, '\\n');
+                return `
+                <div class="post" id="post-${post.id}">
                     <div class="post-date">${new Date(post.date).toLocaleString()}</div>
-                    <div class="post-description">${post.description}</div>
+                    <div class="post-description">${post.description.replace(/\n/g, '<br>')}</div>
                     ${post.image ? `<img src="/images/${post.image}" alt="Post image" class="post-image">` : ''}
                     <div class="post-actions">
-                        <button class="btn-small btn-edit" onclick="editPost(${post.id}, '${post.description.replace(/'/g, "\\'")}', '${post.image || ''}')">Edit</button>
-                        <button class="btn-small btn-delete" onclick="deletePost(${post.id})">Delete</button>
+                        <button class="btn btn-small" onclick="editPost(${post.id}, '${escapedDescription}', '${post.image || ''}')">Edit</button>
+                        <button class="btn btn-danger btn-small" onclick="deletePost(${post.id})">Delete</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
         
         // Edit post function
@@ -342,12 +494,16 @@
             const currentImageContainer = document.getElementById('currentImageContainer');
             const removeImageBtn = document.getElementById('removeImageBtn');
             
+            // Reset remove image flag
+            document.getElementById('editForm').removeAttribute('data-remove-image');
+
             if (image) {
                 currentImageSection.style.display = 'block';
                 currentImageContainer.innerHTML = `<img src="/images/${image}" alt="Current image">`;
                 removeImageBtn.style.display = 'inline-block';
             } else {
                 currentImageSection.style.display = 'none';
+                currentImageContainer.innerHTML = '';
             }
             
             document.getElementById('editModal').style.display = 'block';
@@ -363,7 +519,6 @@
         function removeCurrentImage() {
             const currentImageContainer = document.getElementById('currentImageContainer');
             const removeImageBtn = document.getElementById('removeImageBtn');
-            const currentImageSection = document.getElementById('currentImageSection');
             
             currentImageContainer.innerHTML = '<p style="color: #999; font-style: italic;">Image will be removed when you update the post</p>';
             removeImageBtn.style.display = 'none';
@@ -385,7 +540,11 @@
                 
                 if (response.ok) {
                     showMessage('Post deleted successfully!', 'success');
-                    loadAllPosts(); // Refresh posts
+                    // Instead of full reload, just remove the element
+                    const postElement = document.getElementById(`post-${id}`);
+                    if(postElement) {
+                        postElement.remove();
+                    }
                 } else {
                     const error = await response.text();
                     showMessage(`Error: ${error}`, 'error');

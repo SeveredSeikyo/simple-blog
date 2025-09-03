@@ -131,6 +131,31 @@ app.get('/api/all', (req, res) => {
     });
 });
 
+// GET /api/search - Search for posts
+app.get('/api/search', (req, res) => {
+    const { term } = req.query;
+
+    if (!term || term.trim() === '') {
+        return res.status(400).send('Search term is required');
+    }
+
+    const query = `
+        SELECT id, date, description, image 
+        FROM posts 
+        WHERE description LIKE ?
+        ORDER BY date DESC
+    `;
+    
+    db.all(query, [`%${term}%`], (err, rows) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).send('Database error');
+        }
+        
+        res.json(rows);
+    });
+});
+
 // PUT /api/post/:id - Update a blog post
 app.put('/api/post/:id', upload.single('image'), (req, res) => {
     const postId = parseInt(req.params.id);
@@ -294,4 +319,5 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`  POST /api/post - Create new post`);
     console.log(`  GET  /api/today - Get today's posts`);
     console.log(`  GET  /api/all - Get all posts`);
+    console.log(`  GET  /api/search?term={query} - Search posts`);
 });
