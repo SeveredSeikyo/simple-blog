@@ -296,36 +296,27 @@ app.get('/generate-linkedIn-post', async (req, res) => {
 
             const systemPrompt = `
             You are a professional content writer specializing in LinkedIn posts for the tech community. 
-            Your role is to turn raw blog entries (given in JSON) into engaging, concise, and professional LinkedIn posts. 
-            
+            Your job is to turn raw blog entries into engaging LinkedIn posts.
+
             RULES:
-            - Always use the given JSON as the sole source of content (do not invent unrelated topics).
-            - Extract the "description" field as the blog content.
-            - Summarize the main idea clearly.
-            - Add a personal or reflective angle if possible.
-            - Keep the tone friendly but professional (no jargon overload).
-            - Encourage engagement with a question or call-to-action.
-            - Length: 100–200 words.
-            - If "image" is not null, suggest a 1-line caption.
+            - Use ONLY the provided JSON (no unrelated topics).
+            - Summarize the description into a professional + personal post.
+            - Keep it 100–200 words, friendly but professional.
+            - End with a question or call-to-action.
+            - If "image" exists, add a one-line caption.
             
-            RETURN FORMAT:
-            Return only valid JSON in the following format:
-            {
-              "linkedin_post": "final LinkedIn post text here"
-            }
+            STRICT OUTPUT RULE:
+            Return ONLY valid JSON with this format:
+            { "linkedin_post": "final LinkedIn post text" }
+            Do not include explanations, <think>, or extra text.
             `;
 
             const userPrompt = `
-            Here is today’s blog post in JSON format:
+            Here is today’s blog post JSON:
 
             ${JSON.stringify(descriptions, null, 2)}
 
-            Task:
-            1. Extract the title and main idea from "description".
-            2. Rewrite it as a LinkedIn post (100–200 words).
-            3. Keep the tone professional + personal.
-            4. If an "image" is present, add a one-line caption suggestion.
-            5. Return the final LinkedIn post strictly as JSON with key "linkedin_post".
+            Task: Rewrite it into a LinkedIn post following the rules above.
             `;
 
             const response = await client.path("/chat/completions").post({
@@ -335,28 +326,31 @@ app.get('/generate-linkedIn-post', async (req, res) => {
                         { role: "user", content: userPrompt }
                     ],
                     model: "xai/grok-3-mini",
-                    max_tokens: 1024,
-                    temperature: 1,
-                    top_p: 1,
-                    response_format: { type: "json_object" }
+                    max_tokens: 800,
+                    temperature: 0.7
                 }
             });
 
-            // Debug log full response
             console.log("Raw API response:", JSON.stringify(response.body, null, 2));
 
-            if (!response.body || !response.body.choices || response.body.choices.length === 0) {
+            if (!response.body?.choices?.length) {
                 return res.status(500).json({ error: "No choices returned", details: response.body });
             }
 
-            const resultText = response.body.choices[0].message.content;
+            let resultText = response.body.choices[0].message?.content || "";
+
+            // 🛠 Strip junk like <think>...</think> if it sneaks in
+            resultText = resultText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 
             let result;
             try {
                 result = JSON.parse(resultText);
             } catch (e) {
-                console.error("Non-JSON output from model:", resultText);
-                return res.status(500).json({ error: "Model did not return valid JSON" });
+                console.error("Model returned non-JSON:", resultText);
+                return res.status(500).json({
+                    error: "Model did not return valid JSON",
+                    raw: resultText
+                });
             }
 
             res.json(result);
@@ -366,6 +360,7 @@ app.get('/generate-linkedIn-post', async (req, res) => {
         res.status(500).json({ error: 'Failed to generate LinkedIn post' });
     }
 });
+
 
 
 // GET /api/all - Get all posts (Public)
