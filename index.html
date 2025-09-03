@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Blog App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .form-section {
+            background: #f8f9ff;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #e1e8ff;
+        }
+        
+        .form-section h2 {
+            color: #444;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ff;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(45deg, #48cae4, #0096c7);
+            margin-left: 10px;
+        }
+        
+        .posts-section {
+            margin-top: 30px;
+        }
+        
+        .posts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .posts-header h2 {
+            color: #333;
+            font-size: 1.8rem;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .post {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s ease;
+        }
+        
+        .post:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+        }
+        
+        .post-date {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .post-description {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .post-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            margin-top: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+        
+        .error {
+            color: #e74c3c;
+            background: #ffeaea;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .success {
+            color: #27ae60;
+            background: #eafaf1;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #27ae60;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .posts-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .filter-buttons {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>My Simple Blog</h1>
+        
+        <div class="form-section">
+            <h2>Create New Post</h2>
+            <form id="blogForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="description">Post Content:</label>
+                    <textarea id="description" name="description" placeholder="Write your blog post here..." required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="image">Upload Image (optional):</label>
+                    <input type="file" id="image" name="image" accept="image/*">
+                </div>
+                
+                <button type="submit" class="btn">Publish Post</button>
+            </form>
+        </div>
+        
+        <div class="posts-section">
+            <div class="posts-header">
+                <h2>Blog Posts</h2>
+                <div class="filter-buttons">
+                    <button class="btn" onclick="loadAllPosts()">All Posts</button>
+                    <button class="btn btn-secondary" onclick="loadTodayPosts()">Today's Posts</button>
+                </div>
+            </div>
+            
+            <div id="posts-container">
+                <div class="loading">Loading posts...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Form submission
+        document.getElementById('blogForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const description = document.getElementById('description').value;
+            const imageFile = document.getElementById('image').files[0];
+            
+            formData.append('description', description);
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+            
+            try {
+                const response = await fetch('/api/post', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    showMessage('Post published successfully!', 'success');
+                    document.getElementById('blogForm').reset();
+                    loadAllPosts(); // Refresh posts
+                } else {
+                    const error = await response.text();
+                    showMessage(`Error: ${error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, 'error');
+            }
+        });
+        
+        // Load all posts
+        async function loadAllPosts() {
+            try {
+                document.getElementById('posts-container').innerHTML = '<div class="loading">Loading posts...</div>';
+                const response = await fetch('/api/all');
+                
+                if (response.ok) {
+                    const posts = await response.json();
+                    displayPosts(posts);
+                } else {
+                    showMessage('Error loading posts', 'error');
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Load today's posts
+        async function loadTodayPosts() {
+            try {
+                document.getElementById('posts-container').innerHTML = '<div class="loading">Loading today\'s posts...</div>';
+                const response = await fetch('/api/today');
+                
+                if (response.ok) {
+                    const posts = await response.json();
+                    displayPosts(posts, "today");
+                } else {
+                    showMessage('Error loading today\'s posts', 'error');
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Display posts
+        function displayPosts(posts, filter = 'all') {
+            const container = document.getElementById('posts-container');
+            
+            if (posts.length === 0) {
+                const message = filter === 'today' ? 'No posts today yet!' : 'No posts yet!';
+                container.innerHTML = `<div class="loading">${message}</div>`;
+                return;
+            }
+            
+            container.innerHTML = posts.map(post => `
+                <div class="post">
+                    <div class="post-date">${new Date(post.date).toLocaleString()}</div>
+                    <div class="post-description">${post.description}</div>
+                    ${post.image ? `<img src="/images/${post.image}" alt="Post image" class="post-image">` : ''}
+                </div>
+            `).join('');
+        }
+        
+        // Show messages
+        function showMessage(message, type) {
+            const existingMessage = document.querySelector('.message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            
+            const form = document.querySelector('.form-section');
+            form.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+        
+        // Load all posts on page load
+        document.addEventListener('DOMContentLoaded', loadAllPosts);
+    </script>
+</body>
+</html>

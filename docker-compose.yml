@@ -1,0 +1,34 @@
+services:
+  blog-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: simple-blog-app
+    ports:
+      - "3020:3020"
+    volumes:
+      # Persist database and images
+      - blog_data:/app/data
+      - blog_images:/app/images
+    environment:
+      - NODE_ENV=production
+      - TZ=UTC
+    restart: unless-stopped
+    networks:
+      - blog_network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3020/api/all', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  blog_data:
+    driver: local
+  blog_images:
+    driver: local
+
+networks:
+  blog_network:
+    driver: bridge
