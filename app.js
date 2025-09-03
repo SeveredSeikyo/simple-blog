@@ -4,9 +4,12 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = 3020;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-it';
 
 // Ensure images directory exists
 const imagesDir = path.join(__dirname, 'images');
@@ -18,14 +21,26 @@ if (!fs.existsSync(imagesDir)) {
 const dbPath = process.env.NODE_ENV === 'production' ? './data/sqlite.db' : './sqlite.db';
 const db = new sqlite3.Database(dbPath);
 
-// Create table if it doesn't exist
+// Create tables if they don't exist
 db.serialize(() => {
+    // Users table
+    db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    `);
+
+    // Posts table with user_id foreign key
     db.run(`
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             date DATETIME DEFAULT CURRENT_TIMESTAMP,
             description TEXT NOT NULL,
-            image TEXT
+            image TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     `);
 });
@@ -35,6 +50,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('.'));
 app.use('/images', express.static('images'));
+
+// Auth middleware to verify JWT
+const verifyToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).send('Access denied. No token provided.');
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (ex) {
+        res.status(400).send('Invalid token.');
+    }
+};
 
 // Configure multer for image uploads
 const storage = multer.diskStorage({
@@ -65,10 +98,67 @@ const upload = multer({
     }
 });
 
-// API Routes
+// --- API Routes ---
 
-// POST /api/post - Create a new blog post
-app.post('/api/post', upload.single('image'), (req, res) => {
+// --- Auth Routes ---
+
+// POST /api/register - Register a new user
+app.post('/api/register', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).send('Username and password are required');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const query = `INSERT INTO users (username, password) VALUES (?, ?)`;
+    db.run(query, [username, hashedPassword], function(err) {
+        if (err) {
+            if (err.message.includes('UNIQUE constraint failed')) {
+                return res.status(409).send('Username already exists');
+            }
+            console.error('Database error:', err);
+            return res.status(500).send('Database error');
+        }
+        res.status(201).json({ id: this.lastID, username: username });
+    });
+});
+
+// POST /api/login - Login a user
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).send('Username and password are required');
+    }
+
+    const query = `SELECT * FROM users WHERE username = ?`;
+    db.get(query, [username], async (err, user) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).send('Database error');
+        }
+        if (!user) {
+            return res.status(400).send('Invalid username or password');
+        }
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            return res.status(400).send('Invalid username or password');
+        }
+
+        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+        res.json({ token });
+    });
+});
+
+
+// --- Blog Post Routes ---
+
+// POST /api/post - Create a new blog post (Protected)
+app.post('/api/post', [verifyToken, upload.single('image')], (req, res) => {
     const { description } = req.body;
     
     if (!description || description.trim() === '') {
@@ -76,10 +166,11 @@ app.post('/api/post', upload.single('image'), (req, res) => {
     }
     
     const imageFilename = req.file ? req.file.filename : null;
+    const userId = req.user.id;
+
+    const query = `INSERT INTO posts (user_id, description, image) VALUES (?, ?, ?)`;
     
-    const query = `INSERT INTO posts (description, image) VALUES (?, ?)`;
-    
-    db.run(query, [description.trim(), imageFilename], function(err) {
+    db.run(query, [userId, description.trim(), imageFilename], function(err) {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).send('Database error');
@@ -92,15 +183,16 @@ app.post('/api/post', upload.single('image'), (req, res) => {
     });
 });
 
-// GET /api/today - Get posts from today
+// GET /api/today - Get posts from today (Public)
 app.get('/api/today', (req, res) => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     
     const query = `
-        SELECT id, date, description, image 
-        FROM posts 
-        WHERE date(date) = date(?)
-        ORDER BY date DESC
+        SELECT p.id, p.date, p.description, p.image, u.username
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE date(p.date) = date(?)
+        ORDER BY p.date DESC
     `;
     
     db.all(query, [today], (err, rows) => {
@@ -113,12 +205,13 @@ app.get('/api/today', (req, res) => {
     });
 });
 
-// GET /api/all - Get all posts
+// GET /api/all - Get all posts (Public)
 app.get('/api/all', (req, res) => {
     const query = `
-        SELECT id, date, description, image 
-        FROM posts 
-        ORDER BY date DESC
+        SELECT p.id, p.date, p.description, p.image, u.username
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        ORDER BY p.date DESC
     `;
     
     db.all(query, [], (err, rows) => {
@@ -131,7 +224,7 @@ app.get('/api/all', (req, res) => {
     });
 });
 
-// GET /api/search - Search for posts
+// GET /api/search - Search for posts (Public)
 app.get('/api/search', (req, res) => {
     const { term } = req.query;
 
@@ -140,10 +233,11 @@ app.get('/api/search', (req, res) => {
     }
 
     const query = `
-        SELECT id, date, description, image 
-        FROM posts 
-        WHERE description LIKE ?
-        ORDER BY date DESC
+        SELECT p.id, p.date, p.description, p.image, u.username
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.description LIKE ?
+        ORDER BY p.date DESC
     `;
     
     db.all(query, [`%${term}%`], (err, rows) => {
@@ -156,11 +250,12 @@ app.get('/api/search', (req, res) => {
     });
 });
 
-// PUT /api/post/:id - Update a blog post
-app.put('/api/post/:id', upload.single('image'), (req, res) => {
+// PUT /api/post/:id - Update a blog post (Protected & Ownership required)
+app.put('/api/post/:id', [verifyToken, upload.single('image')], (req, res) => {
     const postId = parseInt(req.params.id);
     const { description, removeImage } = req.body;
-    
+    const userId = req.user.id;
+
     if (!postId || isNaN(postId)) {
         return res.status(400).send('Invalid post ID');
     }
@@ -169,8 +264,8 @@ app.put('/api/post/:id', upload.single('image'), (req, res) => {
         return res.status(400).send('Description is required');
     }
     
-    // First, get the current post to handle image deletion
-    db.get('SELECT image FROM posts WHERE id = ?', [postId], (err, currentPost) => {
+    // First, get the current post to check ownership and handle image deletion
+    db.get('SELECT user_id, image FROM posts WHERE id = ?', [postId], (err, currentPost) => {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).send('Database error');
@@ -178,6 +273,10 @@ app.put('/api/post/:id', upload.single('image'), (req, res) => {
         
         if (!currentPost) {
             return res.status(404).send('Post not found');
+        }
+
+        if (currentPost.user_id !== userId) {
+            return res.status(403).send('Forbidden: You do not own this post');
         }
         
         let newImageFilename = currentPost.image; // Keep current image by default
@@ -216,10 +315,6 @@ app.put('/api/post/:id', upload.single('image'), (req, res) => {
                 return res.status(500).send('Database error');
             }
             
-            if (this.changes === 0) {
-                return res.status(404).send('Post not found');
-            }
-            
             res.json({
                 id: postId,
                 message: 'Post updated successfully'
@@ -228,16 +323,17 @@ app.put('/api/post/:id', upload.single('image'), (req, res) => {
     });
 });
 
-// DELETE /api/post/:id - Delete a blog post
-app.delete('/api/post/:id', (req, res) => {
+// DELETE /api/post/:id - Delete a blog post (Protected & Ownership required)
+app.delete('/api/post/:id', verifyToken, (req, res) => {
     const postId = parseInt(req.params.id);
-    
+    const userId = req.user.id;
+
     if (!postId || isNaN(postId)) {
         return res.status(400).send('Invalid post ID');
     }
     
-    // First, get the post to delete associated image file
-    db.get('SELECT image FROM posts WHERE id = ?', [postId], (err, post) => {
+    // First, get the post to check ownership and delete associated image file
+    db.get('SELECT user_id, image FROM posts WHERE id = ?', [postId], (err, post) => {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).send('Database error');
@@ -246,16 +342,16 @@ app.delete('/api/post/:id', (req, res) => {
         if (!post) {
             return res.status(404).send('Post not found');
         }
+
+        if (post.user_id !== userId) {
+            return res.status(403).send('Forbidden: You do not own this post');
+        }
         
         // Delete the post from database
         db.run('DELETE FROM posts WHERE id = ?', [postId], function(err) {
             if (err) {
                 console.error('Database error:', err);
                 return res.status(500).send('Database error');
-            }
-            
-            if (this.changes === 0) {
-                return res.status(404).send('Post not found');
             }
             
             // Delete associated image file if it exists
@@ -315,9 +411,4 @@ process.on('SIGINT', () => {
 // Start server
 app.listen(port, '0.0.0.0', () => {
     console.log(`Blog app running on http://localhost:${port}`);
-    console.log(`API endpoints:`);
-    console.log(`  POST /api/post - Create new post`);
-    console.log(`  GET  /api/today - Get today's posts`);
-    console.log(`  GET  /api/all - Get all posts`);
-    console.log(`  GET  /api/search?term={query} - Search posts`);
 });

@@ -16,6 +16,50 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            color: #333;
+        }
+
+        .auth-container {
+            max-width: 400px;
+            margin: 5% auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .auth-container h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .auth-form .form-group {
+            margin-bottom: 15px;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ff;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .auth-form .btn {
+            width: 100%;
+            padding: 12px;
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .auth-switch a {
+            color: #667eea;
+            cursor: pointer;
+            font-weight: 600;
         }
         
         .container {
@@ -36,6 +80,21 @@
             background: linear-gradient(45deg, #667eea, #764ba2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+        }
+
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .user-info {
+            font-weight: 600;
+        }
+
+        .user-info #logoutBtn {
+            margin-left: 15px;
         }
         
         .form-section {
@@ -93,6 +152,7 @@
             font-size: 16px;
             font-weight: 600;
             transition: transform 0.2s ease;
+            text-align: center;
         }
         
         .btn:hover {
@@ -154,23 +214,27 @@
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             border-left: 4px solid #667eea;
-            transition: transform 0.2s ease;
         }
         
-        .post:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
         }
-        
+
+        .post-author {
+            font-weight: 700;
+            color: #764ba2;
+        }
+
         .post-date {
             color: #666;
             font-size: 0.9rem;
-            margin-bottom: 10px;
             font-weight: 600;
         }
         
         .post-description {
-            color: #333;
             line-height: 1.6;
             margin-bottom: 15px;
             white-space: pre-wrap;
@@ -189,19 +253,18 @@
             text-align: right;
         }
         
-        .loading {
+        .loading, .message-container {
             text-align: center;
-            color: #666;
-            font-style: italic;
             padding: 20px;
         }
         
         .message {
             padding: 15px;
             border-radius: 10px;
-            margin: 15px 0;
+            margin: 15px auto;
             border-left-width: 4px;
             border-left-style: solid;
+            max-width: 600px;
         }
 
         .error {
@@ -251,11 +314,6 @@
             cursor: pointer;
         }
 
-        .close-btn:hover,
-        .close-btn:focus {
-            color: black;
-        }
-
         #currentImageSection img {
             max-width: 200px;
             border-radius: 10px;
@@ -263,70 +321,96 @@
         }
         
         @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .posts-header {
+            .posts-header, .main-header {
                 flex-direction: column;
                 gap: 15px;
-            }
-            
-            .filter-buttons {
-                justify-content: center;
-            }
-
-            .search-form {
-                width: 100%;
-            }
-
-            .search-form input {
-                min-width: 0;
-                width: 100%;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>My Simple Blog</h1>
-        
-        <div class="form-section">
-            <h2>Create New Post</h2>
-            <form id="blogForm" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label for="description">Post Content:</label>
-                    <textarea id="description" name="description" placeholder="Write your blog post here..." required></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="image">Upload Image (optional):</label>
-                    <input type="file" id="image" name="image" accept="image/*">
-                </div>
-                
-                <button type="submit" class="btn">Publish Post</button>
-            </form>
-        </div>
-        
-        <div class="posts-section">
-            <div class="posts-header">
-                <h2>Blog Posts</h2>
-                <form class="search-form" id="searchForm">
-                    <input type="search" id="searchInput" placeholder="Search in posts...">
-                    <button type="submit" class="btn">Search</button>
+
+    <div id="auth-section">
+        <div class="auth-container">
+            <div id="login-view">
+                <h1>Login</h1>
+                <form id="loginForm" class="auth-form">
+                    <div class="form-group">
+                        <input type="text" id="loginUsername" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="loginPassword" placeholder="Password" required>
+                    </div>
+                    <button type="submit" class="btn">Login</button>
                 </form>
-                <div class="filter-buttons">
-                    <button class="btn" onclick="loadAllPosts()">All Posts</button>
-                    <button class="btn btn-secondary" onclick="loadTodayPosts()">Today's Posts</button>
+                <div class="auth-switch">
+                    <p>Don't have an account? <a onclick="toggleAuthView()">Register</a></p>
+                </div>
+            </div>
+
+            <div id="register-view" style="display: none;">
+                <h1>Register</h1>
+                <form id="registerForm" class="auth-form">
+                    <div class="form-group">
+                        <input type="text" id="registerUsername" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="registerPassword" placeholder="Password" required>
+                    </div>
+                    <button type="submit" class="btn">Register</button>
+                </form>
+                <div class="auth-switch">
+                    <p>Already have an account? <a onclick="toggleAuthView()">Login</a></p>
+                </div>
+            </div>
+            <div id="auth-message" class="message-container"></div>
+        </div>
+    </div>
+
+    <div id="app-section" style="display: none;">
+        <div class="container">
+            <div class="main-header">
+                <h1>My Simple Blog</h1>
+                <div class="user-info">
+                    <span id="username-display"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
                 </div>
             </div>
             
-            <div id="posts-container">
-                <div class="loading">Loading posts...</div>
+            <div class="form-section">
+                <h2>Create New Post</h2>
+                <form id="blogForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="description">Post Content:</label>
+                        <textarea id="description" name="description" placeholder="Write your blog post here..." required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="image">Upload Image (optional):</label>
+                        <input type="file" id="image" name="image" accept="image/*">
+                    </div>
+                    
+                    <button type="submit" class="btn">Publish Post</button>
+                </form>
+                <div id="form-message" class="message-container"></div>
+            </div>
+            
+            <div class="posts-section">
+                <div class="posts-header">
+                    <h2>Blog Posts</h2>
+                    <form class="search-form" id="searchForm">
+                        <input type="search" id="searchInput" placeholder="Search in posts...">
+                        <button type="submit" class="btn">Search</button>
+                    </form>
+                    <div class="filter-buttons">
+                        <button class="btn" onclick="loadAllPosts()">All Posts</button>
+                        <button class="btn btn-secondary" onclick="loadTodayPosts()">Today's Posts</button>
+                    </div>
+                </div>
+                
+                <div id="posts-container">
+                    <div class="loading">Loading posts...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -357,43 +441,146 @@
                 
                 <button type="submit" class="btn">Update Post</button>
             </form>
+            <div id="edit-message" class="message-container"></div>
         </div>
     </div>
 
     <script>
-        // Form submission
-        document.getElementById('blogForm').addEventListener('submit', async (e) => {
+        const authSection = document.getElementById('auth-section');
+        const appSection = document.getElementById('app-section');
+
+        // --- Auth Logic ---
+        function toggleAuthView() {
+            const loginView = document.getElementById('login-view');
+            const registerView = document.getElementById('register-view');
+            loginView.style.display = loginView.style.display === 'none' ? 'block' : 'none';
+            registerView.style.display = registerView.style.display === 'none' ? 'block' : 'none';
+            clearMessages();
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const formData = new FormData();
-            const description = document.getElementById('description').value;
-            const imageFile = document.getElementById('image').files[0];
-            
-            formData.append('description', description);
-            if (imageFile) {
-                formData.append('image', imageFile);
-            }
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
             
             try {
-                const response = await fetch('/api/post', {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    initializeApp();
+                } else {
+                    throw new Error(data.message || await response.text());
+                }
+            } catch (error) {
+                showMessage(error.message, 'error', 'auth-message');
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage('Registration successful! Please log in.', 'success', 'auth-message');
+                    toggleAuthView();
+                } else {
+                    throw new Error(data.message || await response.text());
+                }
+            } catch (error) {
+                showMessage(error.message, 'error', 'auth-message');
+            }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('token');
+            authSection.style.display = 'block';
+            appSection.style.display = 'none';
+        });
+
+        function getAuthToken() {
+            return localStorage.getItem('token');
+        }
+
+        function parseJwt(token) {
+            try {
+                return JSON.parse(atob(token.split('.')[1]));
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function getAuthHeaders() {
+            const token = getAuthToken();
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+
+        // --- App Initialization ---
+        function initializeApp() {
+            const token = getAuthToken();
+            if (token) {
+                const user = parseJwt(token);
+                if (user) {
+                    document.getElementById('username-display').textContent = `Welcome, ${user.username}`;
+                    authSection.style.display = 'none';
+                    appSection.style.display = 'block';
+                    loadAllPosts();
+                } else { // Invalid token
+                    localStorage.removeItem('token');
+                }
+            } else {
+                authSection.style.display = 'block';
+                appSection.style.display = 'none';
+            }
+        }
+
+        // --- API Call Wrappers ---
+        async function authenticatedFetch(url, options = {}) {
+            const headers = { ...getAuthHeaders(), ...options.headers };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401) { // Token expired or invalid
+                localStorage.removeItem('token');
+                initializeApp();
+                throw new Error('Session expired. Please log in again.');
+            }
+            return response;
+        }
+
+        // --- Blog Logic ---
+        document.getElementById('blogForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const response = await authenticatedFetch('/api/post', {
                     method: 'POST',
                     body: formData
                 });
                 
                 if (response.ok) {
-                    showMessage('Post published successfully!', 'success');
-                    document.getElementById('blogForm').reset();
-                    loadAllPosts(); // Refresh posts
+                    showMessage('Post published successfully!', 'success', 'form-message');
+                    e.target.reset();
+                    loadAllPosts();
                 } else {
                     const error = await response.text();
-                    showMessage(`Error: ${error}`, 'error');
+                    throw new Error(error);
                 }
             } catch (error) {
-                showMessage(`Network error: ${error.message}`, 'error');
+                showMessage(`Error: ${error.message}`, 'error', 'form-message');
             }
         });
 
-        // Search form submission
         document.getElementById('searchForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const searchTerm = document.getElementById('searchInput').value;
@@ -404,88 +591,85 @@
             }
         });
         
-        // Load all posts
         async function loadAllPosts() {
             try {
                 document.getElementById('posts-container').innerHTML = '<div class="loading">Loading posts...</div>';
                 const response = await fetch('/api/all');
-                
                 if (response.ok) {
                     const posts = await response.json();
                     displayPosts(posts, { filter: 'all' });
                 } else {
-                    showMessage('Error loading posts', 'error');
+                    throw new Error(await response.text());
                 }
             } catch (error) {
-                showMessage(`Network error: ${error.message}`, 'error');
+                showMessage(`Network error: ${error.message}`, 'error', 'posts-container');
             }
         }
         
-        // Load today's posts
         async function loadTodayPosts() {
             try {
                 document.getElementById('posts-container').innerHTML = '<div class="loading">Loading today\'s posts...</div>';
                 const response = await fetch('/api/today');
-                
                 if (response.ok) {
                     const posts = await response.json();
                     displayPosts(posts, { filter: 'today' });
                 } else {
-                    showMessage('Error loading today\'s posts', 'error');
+                    throw new Error(await response.text());
                 }
             } catch (error) {
-                showMessage(`Network error: ${error.message}`, 'error');
+                showMessage(`Network error: ${error.message}`, 'error', 'posts-container');
             }
         }
 
-        // Search for posts
         async function searchPosts(term) {
             try {
                 document.getElementById('posts-container').innerHTML = `<div class="loading">Searching for "${term}"...</div>`;
                 const response = await fetch(`/api/search?term=${encodeURIComponent(term)}`);
-                
                 if (response.ok) {
                     const posts = await response.json();
                     displayPosts(posts, { filter: 'search', term: term });
                 } else {
-                    showMessage('Error searching posts', 'error');
+                    throw new Error(await response.text());
                 }
             } catch (error) {
-                showMessage(`Network error: ${error.message}`, 'error');
+                showMessage(`Network error: ${error.message}`, 'error', 'posts-container');
             }
         }
         
-        // Display posts
         function displayPosts(posts, context = {}) {
             const container = document.getElementById('posts-container');
-            
+            const currentUser = parseJwt(getAuthToken());
+
             if (posts.length === 0) {
                 let message = 'No posts yet!';
-                if (context.filter === 'today') {
-                    message = 'No posts today yet!';
-                } else if (context.filter === 'search') {
-                    message = `No posts found for "${context.term}".`;
-                }
+                if (context.filter === 'today') message = 'No posts today yet!';
+                else if (context.filter === 'search') message = `No posts found for "${context.term}".`;
                 container.innerHTML = `<div class="loading">${message}</div>`;
                 return;
             }
             
             container.innerHTML = posts.map(post => {
-                const escapedDescription = post.description.replace(/\\/g, '\\').replace(/'/g, "'\'").replace(/\n/g, '\n');
+                const escapedDescription = post.description.replace(///g, '\\').replace(/'/g, "'\'").replace(/\n/g, '\n');
+                const isOwner = currentUser && currentUser.id === post.user_id;
+
                 return `
                 <div class="post" id="post-${post.id}">
-                    <div class="post-date">${new Date(post.date).toLocaleString()}</div>
+                    <div class="post-header">
+                        <div class="post-author">by ${post.username}</div>
+                        <div class="post-date">${new Date(post.date).toLocaleString()}</div>
+                    </div>
                     <div class="post-description">${post.description.replace(/\n/g, '<br>')}</div>
                     ${post.image ? `<img src="/images/${post.image}" alt="Post image" class="post-image">` : ''}
+                    ${isOwner ? `
                     <div class="post-actions">
                         <button class="btn btn-small" onclick="editPost(${post.id}, '${escapedDescription}', '${post.image || ''}')">Edit</button>
                         <button class="btn btn-danger btn-small" onclick="deletePost(${post.id})">Delete</button>
                     </div>
+                    ` : ''}
                 </div>
             `}).join('');
         }
         
-        // Edit post function
         function editPost(id, description, image) {
             document.getElementById('editPostId').value = id;
             document.getElementById('editDescription').value = description;
@@ -494,7 +678,6 @@
             const currentImageContainer = document.getElementById('currentImageContainer');
             const removeImageBtn = document.getElementById('removeImageBtn');
             
-            // Reset remove image flag
             document.getElementById('editForm').removeAttribute('data-remove-image');
 
             if (image) {
@@ -509,117 +692,87 @@
             document.getElementById('editModal').style.display = 'block';
         }
         
-        // Close edit modal
         function closeEditModal() {
             document.getElementById('editModal').style.display = 'none';
             document.getElementById('editForm').reset();
         }
         
-        // Remove current image
         function removeCurrentImage() {
-            const currentImageContainer = document.getElementById('currentImageContainer');
-            const removeImageBtn = document.getElementById('removeImageBtn');
-            
-            currentImageContainer.innerHTML = '<p style="color: #999; font-style: italic;">Image will be removed when you update the post</p>';
-            removeImageBtn.style.display = 'none';
-            
-            // Set a flag to indicate image should be removed
+            document.getElementById('currentImageContainer').innerHTML = '<p>Image will be removed.</p>';
+            document.getElementById('removeImageBtn').style.display = 'none';
             document.getElementById('editForm').setAttribute('data-remove-image', 'true');
         }
         
-        // Delete post function
         async function deletePost(id) {
-            if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-                return;
-            }
+            if (!confirm('Are you sure you want to delete this post?')) return;
             
             try {
-                const response = await fetch(`/api/post/${id}`, {
-                    method: 'DELETE'
-                });
-                
+                const response = await authenticatedFetch(`/api/post/${id}`, { method: 'DELETE' });
                 if (response.ok) {
-                    showMessage('Post deleted successfully!', 'success');
-                    // Instead of full reload, just remove the element
-                    const postElement = document.getElementById(`post-${id}`);
-                    if(postElement) {
-                        postElement.remove();
-                    }
+                    showMessage('Post deleted successfully!', 'success', 'form-message');
+                    document.getElementById(`post-${id}`).remove();
                 } else {
-                    const error = await response.text();
-                    showMessage(`Error: ${error}`, 'error');
+                    throw new Error(await response.text());
                 }
             } catch (error) {
-                showMessage(`Network error: ${error.message}`, 'error');
+                showMessage(`Error: ${error.message}`, 'error', 'form-message');
             }
         }
         
-        // Edit form submission
         document.getElementById('editForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const formData = new FormData();
             const id = document.getElementById('editPostId').value;
-            const description = document.getElementById('editDescription').value;
-            const imageFile = document.getElementById('editImage').files[0];
-            const removeImage = document.getElementById('editForm').getAttribute('data-remove-image') === 'true';
-            
-            formData.append('description', description);
-            
-            if (imageFile) {
-                formData.append('image', imageFile);
-            } else if (removeImage) {
+            const formData = new FormData(e.target);
+            if (e.target.getAttribute('data-remove-image') === 'true') {
                 formData.append('removeImage', 'true');
             }
-            
+
             try {
-                const response = await fetch(`/api/post/${id}`, {
+                const response = await authenticatedFetch(`/api/post/${id}`, {
                     method: 'PUT',
                     body: formData
                 });
                 
                 if (response.ok) {
-                    showMessage('Post updated successfully!', 'success');
+                    showMessage('Post updated successfully!', 'success', 'edit-message');
                     closeEditModal();
-                    loadAllPosts(); // Refresh posts
+                    loadAllPosts();
                 } else {
-                    const error = await response.text();
-                    showMessage(`Error: ${error}`, 'error');
+                    throw new Error(await response.text());
                 }
             } catch (error) {
-                showMessage(`Network error: ${error.message}`, 'error');
+                showMessage(`Error: ${error.message}`, 'error', 'edit-message');
             }
         });
         
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('editModal');
-            if (event.target === modal) {
+        window.onclick = (event) => {
+            if (event.target == document.getElementById('editModal')) {
                 closeEditModal();
             }
         }
         
-        // Show messages
-        function showMessage(message, type) {
-            const existingMessage = document.querySelector('.message');
-            if (existingMessage) {
-                existingMessage.remove();
-            }
-            
+        function showMessage(message, type, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
             messageDiv.textContent = message;
             
-            const form = document.querySelector('.form-section');
-            form.appendChild(messageDiv);
+            clearMessages(containerId);
+            container.appendChild(messageDiv);
             
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
+            setTimeout(() => messageDiv.remove(), 5000);
+        }
+
+        function clearMessages(containerId) {
+            const container = containerId ? document.getElementById(containerId) : document;
+            const messages = container.querySelectorAll('.message');
+            messages.forEach(m => m.remove());
         }
         
-        // Load all posts on page load
-        document.addEventListener('DOMContentLoaded', loadAllPosts);
+        // Load app
+        initializeApp();
     </script>
 </body>
 </html>
