@@ -198,7 +198,7 @@ app.get('/api/post', (req, res) => {
 // --- Blog Post Routes ---
 
 // POST /api/post - Create a new blog post (Protected)
-app.post('/api/post', [verifyToken, upload.single('image')], (req, res) => {
+app.post('/api/post', [verifyToken, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'title' }, { name: 'description' }])], (req, res) => {
     console.log('req.body for POST /api/post:', req.body);
     const { title, description } = req.body;
     
@@ -425,7 +425,7 @@ app.get('/api/search', (req, res) => {
 });
 
 // PUT /api/post/:id - Update a blog post (Protected & Ownership required)
-app.put('/api/post/:id', [verifyToken, upload.single('image')], (req, res) => {
+app.put('/api/post/:id', [verifyToken, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'title' }, { name: 'description' }, { name: 'removeImage' }])], (req, res) => {
     console.log('req.body for PUT /api/post/:id:', req.body);
     const postId = parseInt(req.params.id);
     const { title, description, removeImage } = req.body;
