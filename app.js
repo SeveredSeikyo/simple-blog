@@ -6,6 +6,8 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+require('dotenv').config();
+const axios = require('axios');
 
 const app = express();
 const port = 3020;
@@ -255,6 +257,62 @@ app.get('/api/post/today', (req, res) => {
 
         res.json(rows);
     });
+});
+
+app.get('/generate-linkedIn-post', async (req, res) => {
+    const { author } = req.query;
+
+    if (!author) {
+        return res.status(400).json({ error: 'Author is required' });
+    }
+
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const query = `
+            SELECT description
+            FROM posts
+            WHERE author = ? AND date(date) = ?
+        `;
+
+        db.all(query, [author, today], async (err, rows) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ error: 'Failed to fetch posts' });
+            }
+
+            const descriptions = rows.map(row => row.description);
+
+            const GEMINI_API_KEY = process.env.API_KEY;
+            const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+
+            const systemPrompt = process.env.System_Prompt || 'You are a helpful assistant.';
+            const userPrompt = process.env.User_Prompt ? process.env.User_Prompt.replace('{descriptions}', descriptions.join('\n')) : `Please generate a LinkedIn post based on the following descriptions:\n${descriptions.join('\n')}`
+
+            const response = await axios.post(
+                `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+                {
+                    contents: [
+                        {
+                            parts: [
+                                { text: systemPrompt },
+                                { text: userPrompt }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            res.json(response.data);
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to generate LinkedIn post' });
+    }
 });
 
 // GET /api/all - Get all posts (Public)
