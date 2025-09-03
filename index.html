@@ -650,6 +650,7 @@
             
             container.innerHTML = posts.map(post => {
                                 const escapedDescription = post.description.replace(/\\/g, '\\').replace(/'/g, "'\'").replace(/\n/g, '\n');
+                const escapedImage = (post.image || '').replace(/'/g, "'\'");
                 const isOwner = currentUser && currentUser.id === post.user_id;
 
                 return `
@@ -662,7 +663,7 @@
                     ${post.image ? `<img src="/images/${post.image}" alt="Post image" class="post-image">` : ''}
                     ${isOwner ? `
                     <div class="post-actions">
-                        <button class="btn btn-small" onclick="editPost(${post.id}, '${escapedDescription}', '${post.image || ''}')">Edit</button>
+                        <button class="btn btn-small" onclick="editPost(${post.id}, '${escapedDescription}', '${escapedImage}')">Edit</button>
                         <button class="btn btn-danger btn-small" onclick="deletePost(${post.id})">Delete</button>
                     </div>
                     ` : ''}

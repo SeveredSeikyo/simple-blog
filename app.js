@@ -155,6 +155,31 @@ app.post('/api/login', (req, res) => {
     });
 });
 
+// GET /api/post - Get posts by author
+app.get('/api/post', (req, res) => {
+    const { author } = req.query;
+
+    if (!author || author.trim() === '') {
+        return res.status(400).send('Author is required');
+    }
+
+    const query = `
+        SELECT p.id, p.date, p.description, p.image, p.author
+        FROM posts p
+        WHERE p.author = ?
+        ORDER BY p.date DESC
+    `;
+
+    db.all(query, [author], (err, rows) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).send('Database error');
+        }
+
+        res.json(rows);
+    });
+});
+
 
 // --- Blog Post Routes ---
 
