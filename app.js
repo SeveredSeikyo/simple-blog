@@ -282,32 +282,30 @@ app.get('/generate-linkedIn-post', async (req, res) => {
 
             const descriptions = rows.map(row => row.description);
 
-            const GEMINI_API_KEY = process.env.API_KEY;
-            const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+            const DEEPSEEK_API_KEY = process.env.API_KEY;
+            const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
 
             const systemPrompt = process.env.System_Prompt || 'You are a helpful assistant.';
             const userPrompt = process.env.User_Prompt ? process.env.User_Prompt.replace('{descriptions}', descriptions.join('\n')) : `Please generate a LinkedIn post based on the following descriptions:\n${descriptions.join('\n')}`
 
             const response = await axios.post(
-                `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+                DEEPSEEK_API_URL,
                 {
-                    contents: [
-                        {
-                            parts: [
-                                { text: systemPrompt },
-                                { text: userPrompt }
-                            ]
-                        }
+                    "model": "deepseek-chat",
+                    "messages": [
+                        {"role": "system", "content": systemPrompt},
+                        {"role": "user", "content": userPrompt}
                     ]
                 },
                 {
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
                     }
                 }
             );
 
-            res.json(response.data);
+            res.json(response.data.choices[0].message.content);
         });
     } catch (error) {
         console.error(error);
