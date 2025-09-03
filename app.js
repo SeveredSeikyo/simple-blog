@@ -305,7 +305,8 @@ app.get('/generate-linkedIn-post', async (req, res) => {
             });
 
             if (isUnexpected(response)) {
-                throw response.body.error;
+                console.error("Deepseek API error:", response.body.error);
+                throw new Error("Failed to generate LinkedIn post from Deepseek API.");
             }
 
             res.json(response.body.choices[0].message.content);
