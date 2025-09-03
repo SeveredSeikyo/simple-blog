@@ -655,7 +655,7 @@
                 return `
                 <div class="post" id="post-${post.id}">
                     <div class="post-header">
-                        <div class="post-author">by ${post.username}</div>
+                        <div class="post-author">by ${post.author}</div>
                         <div class="post-date">${new Date(post.date).toLocaleString()}</div>
                     </div>
                     <div class="post-description">${post.description.replace(/\n/g, '<br>')}</div>

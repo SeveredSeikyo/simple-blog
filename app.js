@@ -33,10 +33,11 @@ db.serialize(() => {
     `);
 
     // Posts table with user_id foreign key
-    db.run(`
+        db.run(`
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
+            author TEXT NOT NULL,
             date DATETIME DEFAULT CURRENT_TIMESTAMP,
             description TEXT NOT NULL,
             image TEXT,
@@ -167,10 +168,11 @@ app.post('/api/post', [verifyToken, upload.single('image')], (req, res) => {
     
     const imageFilename = req.file ? req.file.filename : null;
     const userId = req.user.id;
+    const author = req.user.username;
 
-    const query = `INSERT INTO posts (user_id, description, image) VALUES (?, ?, ?)`;
+    const query = `INSERT INTO posts (user_id, author, description, image) VALUES (?, ?, ?, ?)`;
     
-    db.run(query, [userId, description.trim(), imageFilename], function(err) {
+    db.run(query, [userId, author, description.trim(), imageFilename], function(err) {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).send('Database error');
@@ -188,9 +190,8 @@ app.get('/api/today', (req, res) => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     
     const query = `
-        SELECT p.id, p.date, p.description, p.image, u.username
+        SELECT p.id, p.date, p.description, p.image, p.author
         FROM posts p
-        JOIN users u ON p.user_id = u.id
         WHERE date(p.date) = date(?)
         ORDER BY p.date DESC
     `;
@@ -208,10 +209,11 @@ app.get('/api/today', (req, res) => {
 // GET /api/all - Get all posts (Public)
 app.get('/api/all', (req, res) => {
     const query = `
-        SELECT p.id, p.date, p.description, p.image, u.username
+        const query = `
+        SELECT p.id, p.date, p.description, p.image, p.author
         FROM posts p
-        JOIN users u ON p.user_id = u.id
         ORDER BY p.date DESC
+    `;
     `;
     
     db.all(query, [], (err, rows) => {
@@ -233,11 +235,12 @@ app.get('/api/search', (req, res) => {
     }
 
     const query = `
-        SELECT p.id, p.date, p.description, p.image, u.username
+        const query = `
+        SELECT p.id, p.date, p.description, p.image, p.author
         FROM posts p
-        JOIN users u ON p.user_id = u.id
         WHERE p.description LIKE ?
         ORDER BY p.date DESC
+    `;
     `;
     
     db.all(query, [`%${term}%`], (err, rows) => {
