@@ -340,6 +340,13 @@ app.get('/generate-linkedIn-post', async (req, res) => {
                 }
             });
 
+            // Debug log full response
+            console.log("Raw API response:", JSON.stringify(response.body, null, 2));
+
+            if (!response.body || !response.body.choices || response.body.choices.length === 0) {
+                return res.status(500).json({ error: "No choices returned", details: response.body });
+            }
+
             const resultText = response.body.choices[0].message.content;
 
             let result;
